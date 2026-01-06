@@ -3,6 +3,7 @@ import vercel from '@astrojs/vercel'
 import AstroPureIntegration from 'astro-pure'
 import { defineConfig, fontProviders } from 'astro/config'
 import rehypeKatex from 'rehype-katex'
+import rehypeCallouts from 'rehype-callouts'
 import remarkMath from 'remark-math'
 
 // Local integrations
@@ -62,7 +63,8 @@ export default defineConfig({
           properties: { className: ['anchor'] },
           content: { type: 'text', value: '#' }
         }
-      ]
+      ],
+      rehypeCallouts
     ],
     // https://docs.astro.build/en/guides/syntax-highlighting/
     shikiConfig: {
