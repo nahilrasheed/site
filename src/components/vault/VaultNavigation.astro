@@ -1,0 +1,153 @@
+---
+import { cn } from 'astro-pure/utils'
+import VaultTree from './VaultTree.astro'
+import type { VaultNode, FolderNode } from '@/utils/vault-navigation'
+
+interface Props {
+  vault: VaultNode[]
+  folders: FolderNode[]
+  showTitle?: boolean
+  title?: string
+  class?: string
+  activePath?: string
+}
+
+const {
+  vault,
+  folders,
+  showTitle = true,
+  title = 'Vault',
+  class: className,
+  activePath,
+  ...props
+} = Astro.props as Props
+---
+
+<vault-toc class={cn('not-prose', className)} {...props}>
+  {showTitle && (
+    <div class='flex items-center gap-2'>
+      <h2 class='text-foreground font-semibold'>{title}</h2>
+      <button
+        class='vault-toggle-all text-muted-foreground hover:text-foreground transition-colors p-1 rounded'
+        aria-label='Toggle all folders'
+        title='Expand all folders'
+      >
+        <svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='vault-icon-expanded hidden'>
+          <polyline points='17 11 12 6 7 11'></polyline>
+          <polyline points='17 18 12 13 7 18'></polyline>
+        </svg>
+        <svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='vault-icon-collapsed'>
+          <polyline points='7 13 12 18 17 13'></polyline>
+          <polyline points='7 6 12 11 17 6'></polyline>
+        </svg>
+      </button>
+    </div>
+  )}
+  <ul class='mt-4 flex flex-col gap-y-3'>
+    <VaultTree vault={vault} folders={folders} activePath={activePath} />
+  </ul>
+</vault-toc>
+
+<style is:global>
+  /* Container-level styling for vault-toc */
+  vault-toc {
+    display: block;
+  }
+</style>
+
+<script is:inline>
+  if (!customElements.get('vault-toc')) {
+    class VaultTOC extends HTMLElement {
+      link = ''
+
+      constructor() {
+        super()
+        this.link = window.location.pathname
+      }
+
+      connectedCallback() {
+        const currentPath = decodeURIComponent(
+          this.link.replace(/^\/vault\/?/, '').replace(/\/$/, '')
+        )
+
+        const targetLink =
+          this.querySelector(`a[data-doc-path='${currentPath}']`) ??
+          this.querySelector(`a[data-doc-path='${currentPath}/index']`)
+
+        if (targetLink) {
+          const activeItem = targetLink.closest('.vault-item')
+          if (activeItem) {
+            activeItem.classList.add('vault-hl')
+          }
+
+          // Highlight parent folders containing the active document
+          let parentDetails = targetLink.closest('details')
+          while (parentDetails) {
+            parentDetails.open = true
+            parentDetails.classList.add('vault-folder-active')
+            parentDetails
+              .querySelector('summary')
+              ?.classList.add('text-foreground', 'font-semibold')
+            parentDetails = parentDetails.parentElement?.closest('details') ?? null
+          }
+        }
+
+        // Toggle all button
+        const toggleBtn = this.querySelector('.vault-toggle-all')
+        if (toggleBtn) {
+          const expandedIcon = toggleBtn.querySelector('.vault-icon-expanded')
+          const collapsedIcon = toggleBtn.querySelector('.vault-icon-collapsed')
+          
+          // Function to check if all folders are expanded
+          const updateButtonState = () => {
+            const allDetails = Array.from(this.querySelectorAll('details'))
+            const allExpanded = allDetails.every(detail => detail.open)
+            
+            if (allExpanded) {
+              // Show "collapse all" icon (unfold less)
+              expandedIcon?.classList.remove('hidden')
+              collapsedIcon?.classList.add('hidden')
+              toggleBtn.setAttribute('title', 'Collapse all folders')
+            } else {
+              // Show "expand all" icon (unfold more)
+              expandedIcon?.classList.add('hidden')
+              collapsedIcon?.classList.remove('hidden')
+              toggleBtn.setAttribute('title', 'Expand all folders')
+            }
+          }
+
+          // Set initial state based on current folder states
+          updateButtonState()
+
+          // Listen for folder toggle events
+          const allDetails = this.querySelectorAll('details')
+          allDetails.forEach(detail => {
+            detail.addEventListener('toggle', () => {
+              updateButtonState()
+            })
+          })
+
+          toggleBtn.addEventListener('click', () => {
+            const allDetailsArray = Array.from(this.querySelectorAll('details'))
+            const allExpanded = allDetailsArray.every(detail => detail.open)
+            
+            if (allExpanded) {
+              // Collapse all
+              allDetailsArray.forEach(detail => {
+                detail.open = false
+              })
+            } else {
+              // Expand all
+              allDetailsArray.forEach(detail => {
+                detail.open = true
+              })
+            }
+            updateButtonState()
+          })
+        }
+      }
+    }
+
+    customElements.define('vault-toc', VaultTOC)
+  }
+</script>

@@ -1,0 +1,126 @@
+---
+import { render, type CollectionEntry } from 'astro:content'
+
+import { MediumZoom } from 'astro-pure/advanced'
+import { TOC } from 'astro-pure/components/pages'
+import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
+import PageLayout from '@/layouts/ContentLayout.astro'
+
+import VaultContents from './VaultContents.astro'
+import { Collapse } from 'astro-pure/user'
+
+export const prerender = true
+
+// Helper function to generate title from filename
+// Note: ObsidianMdLoader auto-generates title from filename if not in frontmatter
+function getDisplayTitle(post: CollectionEntry<'vault'>): string {
+  // The loader already provides a title, so we can use it directly
+  // If title is undefined, use the document id as fallback
+  return post.data.title || post.id
+}
+
+export async function getStaticPaths() {
+  // getBlogCollection already filters drafts in production
+  const posts = sortMDByDate(await getBlogCollection('vault'))
+  // ObsidianMdLoader IDs don't include .md/.mdx extensions
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post }
+  }))
+}
+
+type Props = {
+  post: CollectionEntry<'vault'>
+}
+
+const { post } = Astro.props
+const { Content, headings } = await render(post)
+// ObsidianDocumentSchema fields
+const { description, created, updated, tags } = post.data
+const displayTitle = getDisplayTitle(post)
+
+---
+
+<PageLayout meta={{ description, title: displayTitle }} back='/vault'>
+  <Fragment slot='sidebar'>
+    {!!headings.length && <TOC {headings} />}
+    <VaultContents class='vault-toc block mt-3' />
+  </Fragment>
+
+  <Fragment slot='header'>
+    <h1 class='text-2xl font-medium sm:mb-2 sm:text-3xl'>
+      {displayTitle}
+    </h1>
+    <div class='mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs leading-6 text-muted-foreground'>
+      {
+        // Description
+        description && (
+          <blockquote class='text-sm italic text-muted-foreground'>
+            <q>{description}</q>
+          </blockquote>
+        )
+      }
+      {
+        // Show metadata and tags if available
+        (created || updated || (tags && tags.length > 0)) && (
+          <div class='flex flex-col gap-y-3 w-full'>
+            {(created || updated) && (
+              <div class='flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground'>
+                {created && <span>Created: {new Date(created).toLocaleDateString()}</span>}
+                {updated && <span>Updated: {new Date(updated).toLocaleDateString()}</span>}
+              </div>
+            )}
+            {tags && tags.length > 0 && (
+              <div class='flex flex-wrap gap-2'>
+                {tags.map((tag) => (
+                  <span class='rounded-lg bg-muted px-2 py-1 text-xs'>#{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      }
+    </div>
+    {
+
+        /* Show more docs collapse on small screen */
+        <Collapse class='md:hidden' title='See more docs'>
+          <VaultContents title={false} />
+        </Collapse>
+    }
+  </Fragment>
+
+  <Content />
+
+  <!-- <div slot='bottom'>
+    {/* Show docs contents */}
+    <div class='rounded-xl border px-4 py-3 mt-3 sm:py-4 md:mt-6'>
+      <DocsContents />
+    </div>
+  </div> -->
+</PageLayout>
+<MediumZoom />
+
+<style>
+  @media (min-width: 1300px) {
+    :global(
+      main, .bottom { transform: translateX(5rem); }
+      #sidebar { overflow: inherit; }
+      toc-heading { height: 100%; display: flex; flex-direction: column; }
+      toc-heading > ul { overflow-y: scroll; }
+    )
+    .vault-toc {
+      position: fixed;
+      top: 0;
+      left: -68rem;
+      margin-top: 0;
+      max-height: calc(100vh - 7rem);
+      overflow-y: scroll;
+      padding-right: 1rem !important;
+      width: 16rem;
+      scroll-padding-top: 6rem;
+      transition: left 0.3s ease-in-out;
+    }
+    
+  }
+</style>

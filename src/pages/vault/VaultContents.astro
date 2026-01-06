@@ -1,0 +1,46 @@
+---
+import { type CollectionEntry } from 'astro:content'
+
+import { getBlogCollection } from 'astro-pure/server'
+import VaultNavigation from '@/components/vault/VaultNavigation.astro'
+import { buildVaultTree, normalizeActivePath } from '@/utils/vault-navigation'
+type VaultEntry = CollectionEntry<'vault'>
+
+export const prerender = true
+export const partial = true
+
+const folderTitleMap: Record<string, string> = {
+  setup: 'Setup',
+  integrations: 'Integrations',
+  advanced: 'Advanced',
+  vault: 'Cybersecurity'
+}
+
+const vaultCollection = (await getBlogCollection('vault')) as VaultEntry[]
+const { folders: topLevelFolders, rootVault } = buildVaultTree(vaultCollection, { folderTitleMap })
+
+type Props = {
+  title?: boolean | string
+  class?: string
+  activePath?: string
+}
+
+const { title = true, class: className, activePath, ...props } = Astro.props
+
+const urlPath = typeof Astro.url === 'object' ? Astro.url.pathname : undefined
+const currentActivePath = normalizeActivePath(activePath ?? urlPath)
+
+// Handle title prop - if string, use it as custom title; if boolean, use default behavior
+const showTitle = typeof title === 'string' ? true : title
+const customTitle = typeof title === 'string' ? title : undefined
+---
+
+<VaultNavigation
+  vault={rootVault}
+  folders={topLevelFolders}
+  showTitle={showTitle}
+  title={customTitle}
+  class={className}
+  activePath={currentActivePath}
+  {...props}
+/>

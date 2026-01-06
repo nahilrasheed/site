@@ -1,0 +1,152 @@
+---
+import { cn } from 'astro-pure/utils'
+import type { VaultNode, FolderNode } from '@/utils/vault-navigation'
+import { isActiveDoc, folderContainsActive } from '@/utils/vault-navigation'
+
+interface Props {
+  vault?: VaultNode[]
+  folders?: FolderNode[]
+  depth?: number
+  activePath?: string
+}
+
+const { vault = [], folders = [], depth = 0, activePath } = Astro.props as Props
+
+const vaultItemClasses = () =>
+  'vault-item relative flex items-center rounded-2xl ms-2 px-3 py-1 text-base text-foreground/75 transition-all hover:text-foreground hover:cursor-pointer'
+
+const branchClasses = (currentDepth: number) =>
+  [
+    'relative flex flex-col',
+    currentDepth > 0 ? 'ms-2 ps-3 mt-1' : 'mt-2'
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+const detailsClasses = () =>
+  'vault-details group relative flex flex-col'
+
+const folderSummaryClasses = (currentDepth: number) =>
+  [
+    'flex items-center justify-between gap-2 rounded-2xl px-3 py-1.5 transition-all hover:cursor-pointer hover:text-foreground',
+    currentDepth === 0 
+      ? 'text-muted-foreground text-base tracking-wide uppercase font-bold letter-spacing-tight'
+      : 'text-foreground/80 text-base font-semibold ms-2'
+  ]
+    .filter(Boolean)
+    .join(' ')
+---
+
+<Fragment>
+  {folders.map((folder) => {
+    const folderActive = folderContainsActive(folder, activePath)
+    return (
+      <li class="vault-folder" data-folder-path={folder.path}>
+        <details
+          class={detailsClasses()}
+          data-folder-path={folder.path}
+          open={folderActive ? true : undefined}
+        >
+          <summary
+            class={cn(
+              folderSummaryClasses(depth),
+              folderActive && 'text-foreground font-semibold'
+            )}
+          >
+            <span class="flex-1 text-start">{folder.title}</span>
+            <svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' class='shrink-0 text-muted-foreground/80 transition-transform duration-200 -rotate-90 group-open:rotate-0'>
+              <polyline points='6 9 12 15 18 9'></polyline>
+            </svg>
+          </summary>
+          {(folder.vault.length > 0 || folder.folders.length > 0) && (
+            <ul class={['vault-branch', branchClasses(depth)].join(' ')}>
+              <Astro.self
+                vault={folder.vault}
+                folders={folder.folders}
+                depth={depth + 1}
+                activePath={activePath}
+              />
+            </ul>
+          )}
+        </details>
+      </li>
+    )
+  })}
+
+  {vault.map((doc) => {
+    const docActive = isActiveDoc(doc.path, activePath)
+    return (
+      <li
+        class={cn(vaultItemClasses(), docActive && 'vault-hl')}
+        data-doc-path={doc.path}
+      >
+        <a
+          class='flex-1 hover:text-foreground'
+          href={`/vault/${doc.path}`}
+          data-doc-path={doc.path}
+        >
+          {doc.title}
+        </a>
+      </li>
+    )
+  })}
+</Fragment>
+
+<style is:global>
+  /* Document item styling */
+  vault-toc .vault-item::before {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 5%;
+    bottom: 5%;
+    left: -0.5rem;
+    width: 2px;
+    background-color: hsl(var(--input) / var(--un-bg-opacity));
+  }
+
+  vault-toc .vault-item.vault-hl {
+    background-color: hsl(var(--muted) / var(--un-bg-opacity));
+    font-weight: 500;
+  }
+
+  vault-toc .vault-item.vault-hl a {
+    color: hsl(var(--primary) / var(--un-text-opacity));
+  }
+
+  vault-toc .vault-item.vault-hl::before {
+    background-color: hsl(var(--primary) / var(--un-bg-opacity));
+  }
+
+  /* Folder styling */
+  vault-toc details > summary {
+    list-style: none;
+    letter-spacing: 0.025em;
+  }
+  
+  vault-toc details > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  vault-toc details > summary:hover {
+    background-color: hsl(var(--muted) / 0.3);
+  }
+
+  /* Active folder highlighting */
+  vault-toc details.vault-folder-active > summary {
+    background-color: hsl(var(--muted) / 0.5);
+    color: white;
+    font-weight: 600;
+    margin-bottom: 0;
+    border-radius: 0.5rem 0.5rem 0 0;
+  }
+
+  /* Highlight entire section under active folder */
+  vault-toc details.vault-folder-active > ul {
+    background-color: hsl(var(--muted) / 0.3);
+    border-radius: 0 0 0.5rem 0.5rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.5rem;
+    margin-top: 0;
+  }
+</style>
