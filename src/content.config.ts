@@ -1,5 +1,6 @@
 import { glob } from 'astro/loaders'
 import { defineCollection, z } from 'astro:content'
+import { ObsidianDocumentSchema, ObsidianMdLoader } from "astro-loader-obsidian";
 
 function removeDupsAndLowerCase(array: string[]) {
   if (!array.length) return array
@@ -40,20 +41,40 @@ const blog = defineCollection({
     })
 })
 
-// Define docs collection
-const docs = defineCollection({
-  loader: glob({ base: './src/content/docs', pattern: '**/*.{md,mdx}' }),
-  schema: () =>
-    z.object({
-      title: z.string().max(60),
-      description: z.string().max(160),
+// Define vault collection
+const vault = defineCollection({
+  loader: ObsidianMdLoader({
+    base: 'src/content/vault',
+    url: 'vault',
+    // Transform tag references in body into links
+    parseTagsIntoLinks: true,
+    // Additional fields to parse as wikilinks if needed
+    wikilinkFields: ['description'],
+    // Broken links strategy: warn, label, or 404
+    brokenLinksStrategy: 'warn',
+  }),
+  schema: ({ image }) =>
+    ObsidianDocumentSchema.extend({
+      title: z.string().optional(),
       publishDate: z.coerce.date().optional(),
       updatedDate: z.coerce.date().optional(),
-      tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
-      draft: z.boolean().default(false),
-      // Special fields
-      order: z.number().default(999)
+      description: z.union([z.string(), z.record(z.any())]).optional().transform(val => 
+        typeof val === 'string' ? val : undefined
+      ),
+      heroImage: z
+        .object({
+          src: image(),
+          alt: z.string().optional(),
+          inferSize: z.boolean().optional(),
+          width: z.number().optional(),
+          height: z.number().optional(),
+          color: z.string().optional()
+        })
+        .optional(),
+      tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase).optional(),
+      draft: z.boolean().default(false).optional(),
+      order: z.number().default(999).optional()
     })
 })
 
-export const collections = { blog, docs }
+export const collections = { blog, vault }
