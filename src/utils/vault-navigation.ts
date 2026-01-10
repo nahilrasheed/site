@@ -14,6 +14,7 @@ export type FolderNode = {
   path: string
   title: string
   orderHint: number
+  indexDoc?: VaultNode
   folders: FolderNode[]
   vault: VaultNode[]
 }
@@ -23,6 +24,7 @@ type FolderBuilder = {
   path: string
   title: string
   orderHint: number
+  indexDoc?: VaultNode
   folders: Map<string, FolderBuilder>
   vault: VaultNode[]
 }
@@ -44,6 +46,7 @@ function createFolder(id: string, path: string, title: string, orderHint: number
     path,
     title,
     orderHint,
+    indexDoc: undefined,
     folders: new Map<string, FolderBuilder>(),
     vault: []
   }
@@ -69,6 +72,7 @@ function normalizeFolder(folder: FolderBuilder): FolderNode {
     path: folder.path,
     title: folder.title,
     orderHint: folder.orderHint,
+    indexDoc: folder.indexDoc,
     folders,
     vault
   }
@@ -82,20 +86,20 @@ export function buildVaultTree(
 
   const rootFolder: FolderBuilder = createFolder('root', '', '', ORDER_FALLBACK)
 
+  // First pass: Create all folder structures
   for (const doc of vaultCollection) {
     const docOrder = doc.data.order ?? ORDER_FALLBACK
-    // ObsidianMdLoader IDs don't include extensions, so no need to remove them
     const docPath = doc.id
-
     const segments = docPath.split('/')
-    const fileName = segments.pop()
-
-    if (!fileName) continue
+    
+    // Don't create a folder for the last segment (the filename)
+    const folderSegments = segments.slice(0, -1)
 
     let currentFolder = rootFolder
     const currentSegments: string[] = []
 
-    for (const segment of segments) {
+    // Create folder hierarchy for this document's path
+    for (const segment of folderSegments) {
       currentSegments.push(segment)
       const folderPath = currentSegments.join('/')
 
@@ -108,17 +112,78 @@ export function buildVaultTree(
       existingFolder.orderHint = Math.min(existingFolder.orderHint, docOrder)
       currentFolder = existingFolder
     }
+  }
 
-    // ObsidianMdLoader auto-generates title from filename
+  // Helper function to find folder by path
+  const findFolderByPath = (path: string): FolderBuilder | null => {
+    const segments = path.split('/')
+    let current = rootFolder
+    
+    for (const segment of segments) {
+      if (!current.folders.has(segment)) {
+        return null
+      }
+      current = current.folders.get(segment)!
+    }
+    
+    return current
+  }
+
+  // Second pass: Assign documents to folders or as index docs
+  for (const doc of vaultCollection) {
+    const docOrder = doc.data.order ?? ORDER_FALLBACK
+    const docPath = doc.id
     const title = doc.data.title ?? toTitleCase(doc.id)
 
-    currentFolder.vault.push({
-      id: doc.id,
-      path: docPath,
-      title,
-      order: docOrder
-    })
-    currentFolder.orderHint = Math.min(currentFolder.orderHint, docOrder)
+    const segments = docPath.split('/')
+    const fileName = segments.pop()
+
+    if (!fileName) continue
+
+    // Navigate to the parent folder
+    let currentFolder = rootFolder
+    for (const segment of segments) {
+      const nextFolder = currentFolder.folders.get(segment)
+      if (!nextFolder) {
+        console.warn(`[vault-navigation] Folder not found: ${segments.join('/')}/${fileName}`)
+        break
+      }
+      currentFolder = nextFolder
+    }
+
+    // Check if this is an Obsidian folder note
+    // ObsidianMdLoader converts "Folder/Subfolder/index.md" to ID "folder/subfolder"
+    // So we check if the document's full path matches an existing folder path
+    const matchingFolder = findFolderByPath(docPath)
+
+    if (matchingFolder) {
+      // This is an Obsidian folder note - assign as indexDoc to the matching folder
+      matchingFolder.indexDoc = {
+        id: doc.id,
+        path: docPath,
+        title,
+        order: docOrder
+      }
+      matchingFolder.orderHint = Math.min(matchingFolder.orderHint, docOrder)
+    } else if (fileName === 'index') {
+      // Explicit index file
+      currentFolder.indexDoc = {
+        id: doc.id,
+        path: docPath,
+        title,
+        order: docOrder
+      }
+      currentFolder.orderHint = Math.min(currentFolder.orderHint, docOrder)
+    } else {
+      // Regular document
+      currentFolder.vault.push({
+        id: doc.id,
+        path: docPath,
+        title,
+        order: docOrder
+      })
+      currentFolder.orderHint = Math.min(currentFolder.orderHint, docOrder)
+    }
   }
 
   const vaultTree = normalizeFolder(rootFolder)
@@ -136,7 +201,8 @@ export function buildVaultTree(
 export function normalizeActivePath(value?: string): string | undefined {
   if (!value) return undefined
   const trimmed = value.replace(/^\/vault\/?/, '').replace(/\/$/, '')
-  return trimmed === '' ? 'index' : trimmed
+  // Ensure consistent lowercase for folder matching
+  return trimmed === '' ? 'index' : trimmed.toLowerCase()
 }
 
 /**

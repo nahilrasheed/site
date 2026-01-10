@@ -40,6 +40,30 @@ const folderSummaryClasses = (currentDepth: number) =>
 <Fragment>
   {folders.map((folder) => {
     const folderActive = folderContainsActive(folder, activePath)
+    const hasIndexDoc = !!folder.indexDoc
+    const hasChildren = folder.vault.length > 0 || folder.folders.length > 0
+    const indexDocActive = hasIndexDoc && isActiveDoc(folder.indexDoc!.path, activePath)
+    
+    // If folder only has index doc and no children, render as simple link
+    if (hasIndexDoc && !hasChildren) {
+      return (
+        <li class="vault-folder" data-folder-path={folder.path}>
+          <a 
+            href={`/vault/${folder.indexDoc!.path}`}
+            data-doc-path={folder.indexDoc!.path}
+            class={cn(
+              folderSummaryClasses(depth),
+              "underline decoration-primary/40 decoration-1 underline-offset-2 hover:decoration-primary/80 hover:decoration-2",
+              indexDocActive && "text-primary font-bold decoration-primary",
+              folderActive && "text-foreground font-semibold"
+            )}
+          >
+            {folder.title}
+          </a>
+        </li>
+      )
+    }
+    
     return (
       <li class="vault-folder" data-folder-path={folder.path}>
         <details
@@ -53,7 +77,20 @@ const folderSummaryClasses = (currentDepth: number) =>
               folderActive && 'text-foreground font-semibold'
             )}
           >
-            <span class="flex-1 text-start">{folder.title}</span>
+            {hasIndexDoc ? (
+              <a 
+                href={`/vault/${folder.indexDoc!.path}`}
+                data-doc-path={folder.indexDoc!.path}
+                class={cn(
+                  "text-start underline decoration-primary/40 decoration-1 underline-offset-2 hover:decoration-primary/80 hover:decoration-2",
+                  indexDocActive && "text-primary font-bold decoration-primary"
+                )}
+              >
+                {folder.title}
+              </a>
+            ) : (
+              <span class="text-start">{folder.title}</span>
+            )}
             <svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' class='shrink-0 text-muted-foreground/80 transition-transform duration-200 -rotate-90 group-open:rotate-0'>
               <polyline points='6 9 12 15 18 9'></polyline>
             </svg>

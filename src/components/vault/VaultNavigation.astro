@@ -75,6 +75,7 @@ const {
           this.querySelector(`a[data-doc-path='${currentPath}/index']`)
 
         if (targetLink) {
+          // Check if this is a regular vault item (not a folder link)
           const activeItem = targetLink.closest('.vault-item')
           if (activeItem) {
             activeItem.classList.add('vault-hl')
@@ -85,9 +86,14 @@ const {
           while (parentDetails) {
             parentDetails.open = true
             parentDetails.classList.add('vault-folder-active')
-            parentDetails
-              .querySelector('summary')
-              ?.classList.add('text-foreground', 'font-semibold')
+            
+            // Only add semibold styling to summary if it's not the index doc link
+            const summary = parentDetails.querySelector('summary')
+            const isIndexDocLink = summary?.querySelector('a[data-doc-path]')
+            if (summary && !isIndexDocLink) {
+              summary.classList.add('text-foreground', 'font-semibold')
+            }
+            
             parentDetails = parentDetails.parentElement?.closest('details') ?? null
           }
         }
