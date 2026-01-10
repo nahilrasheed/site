@@ -1,7 +1,14 @@
 ---
-import { Card, Spoiler, Timeline } from 'astro-pure/user'
+import { Spoiler, Timeline } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
 import Substats from '@/components/about/Substats.astro'
+import Card from '@/components/home/Card.astro'
+import SkillLayout from '@/components/home/SkillLayout.astro'
+
+
+const languages = [ 'Python', 'C', 'Java', 'HTML', 'CSS', 'JavaScript', 'Shell', 'PHP']
+const frontend = ['TypeScript', 'React', 'Vite', 'Astro','Tailwind CSS']
+const backend = ['Node.js', 'Express', 'MongoDB', 'Cloudflare', 'Netlify']
 
 const headings = [
   { depth: 2, slug: 'education', text: 'Education' },
@@ -28,18 +35,31 @@ const headings = [
   <h2 id='education'>Education</h2>
   <Card
     as='a'
-    heading='Indian Institute of Information Technology Kottayam'
-    subheading='B.Tech in Computer Science with Specialization in Cybersecurity'
-    date='2023 - Present'
+    heading='IIIT Kottayam'
+    location='Kottayam, India'
+    subheading='B.Tech in Computer Science and Engineering with Specialization in Cybersecurity'
+    date='August 2023 - Present'
+    href='https://iitikottayam.ac.in/'
+    imagePath='/src/assets/iiitk.png'
   />
 
   <h2 id='certifications'>Certifications</h2>
   <Card
     as='a'
+    heading='Google Cybersecurity Professional Certificate'
+    subheading='Google'
+    date='Dec 2025'
+    href=''
+    imagePath='/src/assets/gcpc.png'
+  />
+  <br/>
+  <Card
+    as='a'
     heading='Cisco Ethical Hacker'
-    subheading=''
+    subheading='Cisco'
     date='July 2025'
     href='https://www.credly.com/badges/f806a313-6c62-4810-b196-eecc93dcb6a8/'
+    imagePath='/src/assets/cisco-eh.png'
   />
 
   {/* social-networks */}
@@ -79,12 +99,12 @@ const headings = [
         content: 'Started writing blogs on a simple jekyll site'
       },
       {
-        date: '2024',
+        date: '2025',
         content:
           'Started accumulating knowledge in cybersecurity and technology into my obsidian vault'
       },
       {
-        date: '2025',
+        date: '2026',
         content: 'Published this website'
       }
     ]}
@@ -102,10 +122,7 @@ const headings = [
       >
     </li>
     <li>
-      Site hosting: <a href='https://vercel.com/' target='_blank'>Cloudflare</a>
-    </li>
-    <li>
-      CI/CD: <a href='https://github.com/features/actions' target='_blank'>GitHub Actions</a>
+      Site hosting: <a href='https://cloudflare.com/' target='_blank'>Cloudflare</a>
     </li>
     <li>
       Other statistics: <a href='https://github.com/spencerwooo/substats' target='_blank'
