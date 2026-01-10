@@ -5,6 +5,7 @@ import { defineConfig, fontProviders } from 'astro/config'
 import rehypeKatex from 'rehype-katex'
 import rehypeCallouts from 'rehype-callouts'
 import remarkMath from 'remark-math'
+import remarkBreaks from 'remark-breaks'
 
 // Local integrations
 import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts'
@@ -52,7 +53,7 @@ export default defineConfig({
 
   // [Markdown]
   markdown: {
-    remarkPlugins: [remarkMath],
+    remarkPlugins: [remarkMath, remarkBreaks],
     rehypePlugins: [
       [rehypeKatex, {}],
       rehypeHeadingIds,
