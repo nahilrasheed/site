@@ -1,0 +1,225 @@
+---
+import { BackToTop } from 'astro-pure/components/pages'
+import type { SiteMeta } from 'astro-pure/types'
+import { Button, Icon } from 'astro-pure/user'
+import { cn } from 'astro-pure/utils'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import { integ } from '@/site-config'
+
+interface Props {
+  meta: SiteMeta
+  highlightColor?: string
+  back?: string
+}
+
+const { meta, highlightColor, back = '/vault', ...props } = Astro.props
+---
+
+<BaseLayout {meta} {highlightColor} {...props}>
+  <div class='vault-grid'>
+    {/* Left: Navigation */}
+    <aside class='vault-nav-area' id='vault-nav-sidebar'>
+      <div class='vault-nav-inner'>
+        <slot name='navigation' />
+        <div class='vault-mobile-toc'>
+          <slot name='toc' />
+        </div>
+      </div>
+    </aside>
+
+    {/* Overlay shade for mobile */}
+    <div
+      id='vault-nav-shade'
+      class='fixed top-0 start-0 w-full h-full'
+      style='display:none;background-color:#00000091;z-index:31'
+    >
+    </div>
+
+    {/* Center: Article */}
+    <main class='vault-main-area'>
+      <div class='vault-article-header' id='vault-article-header'>
+        <Button title='Back' href={back} variant='back' class='mb-4' />
+        <slot name='header' />
+      </div>
+
+      <article id='vault-article' class={cn('vault-article prose max-w-none mx-0 animate mt-8 overflow-x-hidden', integ.typography.class)}>
+        <slot />
+      </article>
+    </main>
+
+    {/* Right: TOC */}
+    <aside class='vault-toc-area' id='vault-toc-sidebar'>
+      <div class='vault-toc-inner'>
+        <slot name='toc' />
+      </div>
+    </aside>
+  </div>
+
+  <BackToTop header='vault-article-header' content='vault-article'>
+    <button
+      slot='other-icons'
+      aria-label='Toggle navigation'
+      class='size-10 flex items-center justify-center rounded-full border-2 border-transparent bg-muted text-muted-foreground duration-300 hover:border-border/75 lg:hidden sm:size-12'
+      id='vault-nav-btn'
+    >
+      <Icon name='list' />
+    </button>
+  </BackToTop>
+</BaseLayout>
+
+<script>
+  // Toggle navigation sidebar visibility on button click
+  const navButton = document.getElementById('vault-nav-btn')
+  const navSidebar = document.getElementById('vault-nav-sidebar')
+  const navShade = document.getElementById('vault-nav-shade') as HTMLElement
+
+  if (navShade) {
+    navShade.addEventListener('click', () => {
+      toggleNav()
+    })
+  }
+
+  function toggleNav() {
+    if (navSidebar && navSidebar.classList.contains('show')) {
+      navSidebar.classList.remove('show')
+      navShade.style.display = 'none'
+    } else if (navSidebar) {
+      navSidebar.classList.add('show')
+      navShade.style.display = 'block'
+    }
+  }
+
+  navButton?.addEventListener('click', () => {
+    toggleNav()
+  })
+</script>
+
+<style is:global>
+  /* Make this page truly full-width within BaseLayout */
+  #main-container { max-width: none !important; }
+
+  .vault-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 0;
+    min-height: calc(100dvh - 6rem);
+    overflow-x: hidden;
+  }
+
+  .vault-nav-area {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-right: 1px solid hsl(var(--border));
+    background: hsl(var(--background));
+    padding: 2rem 1.25rem;
+  }
+  .vault-nav-inner { position: relative; }
+
+  .vault-main-area {
+    padding: 2rem 3rem;
+    overflow-x: hidden;
+    min-width: 0;
+  }
+  .vault-article { 
+    max-width: 100%; 
+    margin: 0; 
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  .vault-article-header { margin-bottom: 1.25rem; }
+
+  .vault-toc-area { display: none; }
+
+  /* Mobile TOC inside nav drawer */
+  .vault-mobile-toc {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid hsl(var(--border));
+  }
+
+  /* Large screens: add right TOC */
+  @media (min-width: 1400px) {
+    .vault-grid { grid-template-columns: 280px 1fr 260px; }
+    .vault-toc-area {
+      display: block;
+      position: sticky;
+      top: 0;
+      height: 100dvh;
+      overflow-y: auto;
+      border-left: 1px solid hsl(var(--border));
+      padding: 2rem 1.25rem;
+      background: hsl(var(--background));
+    }
+    .vault-toc-inner { position: sticky; top: 2rem; }
+    /* Hide mobile TOC on large screens */
+    .vault-mobile-toc { display: none; }
+  }
+
+  /* Mobile: collapse to single column; nav becomes off-canvas */
+  @media (max-width: 1024px) {
+    .vault-grid { grid-template-columns: 1fr; }
+    .vault-nav-area {
+      display: none;
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 280px;
+      height: 100vh;
+      z-index: 40;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .vault-nav-area.show {
+      display: block !important;
+      opacity: 1;
+      animation: 300ms slide-in-left;
+      animation-fill-mode: forwards;
+    }
+
+    #vault-nav-shade {
+      animation: 300ms fade-in;
+    }
+
+    .vault-main-area { padding: 1.5rem; }
+  }
+
+  @media (max-width: 640px) {
+    .vault-nav-area {
+      width: 75vw;
+      max-width: 280px;
+    }
+  }
+
+  /* Always hide shade on desktop */
+  @media (min-width: 1025px) {
+    #vault-nav-shade {
+      display: none !important;
+    }
+  }
+
+  /* Animations */
+  @keyframes slide-in-left {
+    0% {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    100% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+</style>

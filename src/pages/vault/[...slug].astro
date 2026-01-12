@@ -4,10 +4,10 @@ import { render, type CollectionEntry } from 'astro:content'
 import { MediumZoom } from 'astro-pure/advanced'
 import { TOC } from 'astro-pure/components/pages'
 import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
-import PageLayout from '@/layouts/ContentLayout.astro'
+import VaultLayout from '@/layouts/VaultLayout.astro'
+import { Collapse } from 'astro-pure/user'
 
 import VaultContents from './VaultContents.astro'
-import { Collapse } from 'astro-pure/user'
 
 export const prerender = true
 
@@ -40,11 +40,14 @@ const { description, created, updated, tags } = post.data
 const displayTitle = getDisplayTitle(post)
 
 ---
-
-<PageLayout meta={{ description, title: displayTitle }} back='/vault'>
-  <Fragment slot='sidebar'>
-    {!!headings.length && <TOC {headings} />}
-    <VaultContents class='vault-toc block mt-3' />
+<VaultLayout meta={{ description, title: displayTitle }} back='/vault'>
+  <Fragment slot='navigation'>
+    <div class='hidden lg:block'>
+      <VaultContents class='vault-nav' />
+    </div>
+    <Collapse class='lg:hidden' title='Navigation'>
+      <VaultContents class='vault-nav' title={false} />
+    </Collapse>
   </Fragment>
 
   <Fragment slot='header'>
@@ -53,7 +56,6 @@ const displayTitle = getDisplayTitle(post)
     </h1>
     <div class='mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs leading-6 text-muted-foreground'>
       {
-        // Description
         description && (
           <blockquote class='text-sm italic text-muted-foreground'>
             <q>{description}</q>
@@ -61,7 +63,6 @@ const displayTitle = getDisplayTitle(post)
         )
       }
       {
-        // Show metadata and tags if available
         (created || updated || (tags && tags.length > 0)) && (
           <div class='flex flex-col gap-y-3 w-full'>
             {(created || updated) && (
@@ -81,46 +82,14 @@ const displayTitle = getDisplayTitle(post)
         )
       }
     </div>
-    {
-
-        /* Show more docs collapse on small screen */
-        <Collapse class='md:hidden' title='See more docs'>
-          <VaultContents title={false} />
-        </Collapse>
-    }
   </Fragment>
 
   <Content />
 
-  <!-- <div slot='bottom'>
-    {/* Show docs contents */}
-    <div class='rounded-xl border px-4 py-3 mt-3 sm:py-4 md:mt-6'>
-      <DocsContents />
-    </div>
-  </div> -->
-</PageLayout>
+  {!!headings.length && (
+    <Fragment slot='toc'>
+      <TOC {headings} />
+    </Fragment>
+  )}
+</VaultLayout>
 <MediumZoom />
-
-<style>
-  @media (min-width: 1300px) {
-    :global(
-      main, .bottom { transform: translateX(5rem); }
-      #sidebar { overflow: inherit; }
-      toc-heading { height: 100%; display: flex; flex-direction: column; }
-      toc-heading > ul { overflow-y: scroll; }
-    )
-    .vault-toc {
-      position: fixed;
-      top: 0;
-      left: -68rem;
-      margin-top: 0;
-      max-height: calc(100vh - 7rem);
-      overflow-y: scroll;
-      padding-right: 1rem !important;
-      width: 16rem;
-      scroll-padding-top: 6rem;
-      transition: left 0.3s ease-in-out;
-    }
-    
-  }
-</style>
